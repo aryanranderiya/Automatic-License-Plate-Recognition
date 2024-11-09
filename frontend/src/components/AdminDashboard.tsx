@@ -22,22 +22,6 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 
-const occupancyData = [
-  { time: "4/4", value: 400 },
-  { time: "5/4", value: 300 },
-  { time: "6/4", value: 200 },
-  { time: "7/4", value: 278 },
-];
-
-const durationData = [
-  { name: "8-9", value: 15 },
-  { name: "9-10", value: 20 },
-  { name: "10-11", value: 25 },
-  { name: "11-12", value: 30 },
-  { name: "12-1", value: 22 },
-  { name: "1-2", value: 18 },
-];
-
 const COLORS = [
   "#0088FE",
   "#00C49F",
@@ -49,6 +33,7 @@ const COLORS = [
 
 export default function ParkingDashboard() {
   const [parkingData, setParkingData] = useState([]);
+  const [occupancyData, setOccupancyData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredCars, setFilteredCars] = useState([]);
@@ -59,8 +44,6 @@ export default function ParkingDashboard() {
       try {
         const response = await fetch("http://localhost:5000/api/parkingData");
         const data = await response.json();
-        console.log(data);
-
         setParkingData(data);
         setFilteredCars(data);
         setIsLoading(false);
@@ -70,7 +53,18 @@ export default function ParkingDashboard() {
       }
     }
 
+    async function fetchOccupancyData() {
+      try {
+        const response = await fetch("http://localhost:5000/api/occupancy");
+        const data = await response.json();
+        setOccupancyData(data);
+      } catch (error) {
+        console.error("Failed to fetch occupancy data:", error);
+      }
+    }
+
     fetchParkingData();
+    fetchOccupancyData();
   }, []);
 
   const handleSearch = () => {
@@ -227,7 +221,7 @@ export default function ParkingDashboard() {
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie
-                    data={durationData}
+                    data={occupancyData}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
@@ -235,7 +229,7 @@ export default function ParkingDashboard() {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {durationData.map((entry, index) => (
+                    {occupancyData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={COLORS[index % COLORS.length]}
