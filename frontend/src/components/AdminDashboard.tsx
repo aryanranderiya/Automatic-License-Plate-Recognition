@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { Search, Calendar as CalendarIcon, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +36,13 @@ export default function ParkingDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredCars, setFilteredCars] = useState([]);
   const [date, setDate] = useState<Date | undefined>();
+  const [thisWeekOccupancy, setThisWeekOccupancy] = useState(0);
+  const [todayOccupancy, setTodayOccupancy] = useState({
+    occupied: 0,
+    vacant: 0,
+  });
+
+  const totalSpots = 600;
 
   useEffect(() => {
     async function fetchParkingData() {
@@ -58,6 +63,10 @@ export default function ParkingDashboard() {
         const response = await fetch("http://localhost:5000/api/occupancy");
         const data = await response.json();
         setOccupancyData(data);
+
+        // Calculate today's occupancy and this week's average occupancy
+        calculateTodayOccupancy(data);
+        calculateThisWeekOccupancy(data);
       } catch (error) {
         console.error("Failed to fetch occupancy data:", error);
       }
@@ -72,6 +81,61 @@ export default function ParkingDashboard() {
       car.noPlate.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredCars(filtered);
+  };
+
+  const calculateTodayOccupancy = (data: any[]) => {
+    // Get today's date (in MM/DD format)
+    const today = new Date();
+    const todayString = `${today.getMonth() + 1}/${today.getDate()}`;
+
+    // Filter data for today
+    const todayData = data.filter((entry: any) => entry.time === todayString);
+
+    // Calculate total occupied for today
+    const occupied = todayData.reduce((acc, entry) => acc + entry.value, 0);
+
+    // Calculate vacant spaces
+    const vacant = totalSpots - occupied;
+
+    // Set the state with the calculated values
+    setTodayOccupancy({ occupied, vacant });
+  };
+
+  const calculateThisWeekOccupancy = (data: any[]) => {
+    // Get the current date
+    const today = new Date();
+
+    // Get the start of the week (Sunday)
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday of this week
+
+    // Get the end of the week (Saturday)
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday of this week
+
+    // Convert startOfWeek and endOfWeek to MM/DD format strings
+    const startOfWeekString = `${
+      startOfWeek.getMonth() + 1
+    }/${startOfWeek.getDate()}`;
+    const endOfWeekString = `${
+      endOfWeek.getMonth() + 1
+    }/${endOfWeek.getDate()}`;
+
+    // Filter data for this week
+    const weekData = data.filter((entry: any) => {
+      const entryDate = entry.time; // Assuming entry.time is in MM/DD format
+      return entryDate >= startOfWeekString && entryDate <= endOfWeekString;
+    });
+
+    // Calculate total occupied for the week
+    const totalOccupied = weekData.reduce((acc, entry) => acc + entry.value, 0);
+
+    // Calculate the average occupied for this week (avoid division by 0)
+    const averageOccupied =
+      weekData.length > 0 ? totalOccupied / weekData.length : 0;
+
+    // Set the state with the calculated values for this week
+    setThisWeekOccupancy(averageOccupied);
   };
 
   return (
@@ -159,19 +223,21 @@ export default function ParkingDashboard() {
               <div className="flex justify-between items-center">
                 <div>
                   <span className="text-red-500 text-2xl font-bold">
-                    Occupied: 150
+                    Occupied: {todayOccupancy.occupied}
                   </span>
                 </div>
                 <div>
                   <span className="text-green-500 text-2xl font-bold">
-                    Vacant: 43
+                    Vacant: {todayOccupancy.vacant}
                   </span>
                 </div>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
                 <div
                   className="bg-red-500 h-2.5 rounded-full"
-                  style={{ width: "78%" }}
+                  style={{
+                    width: `${(todayOccupancy.occupied / totalSpots) * 100}%`,
+                  }}
                 ></div>
               </div>
             </CardContent>
@@ -189,11 +255,13 @@ export default function ParkingDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">
-                  Avg No of cars this Week
+                  Avg No of Cars This Week
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">343.2</p>
+                <p className="text-3xl font-bold">
+                  {thisWeekOccupancy.toFixed()}
+                </p>
               </CardContent>
             </Card>
           </div>
