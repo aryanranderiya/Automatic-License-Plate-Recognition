@@ -1,4 +1,6 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import { Search, Calendar as CalendarIcon, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,43 +47,34 @@ const COLORS = [
   "#82ca9d",
 ];
 
-const mockCarData = [
-  {
-    no: 1,
-    type: "Sedan",
-    noPlate: "ABC123",
-    timeIn: "09:00",
-    timeOut: "11:30",
-    duration: "2h 30m",
-    blockId: "0x1234...5678",
-  },
-  {
-    no: 2,
-    type: "SUV",
-    noPlate: "XYZ789",
-    timeIn: "10:15",
-    timeOut: "13:45",
-    duration: "3h 30m",
-    blockId: "0x9876...5432",
-  },
-  {
-    no: 3,
-    type: "Hatchback",
-    noPlate: "DEF456",
-    timeIn: "11:30",
-    timeOut: "14:00",
-    duration: "2h 30m",
-    blockId: "0xABCD...EFGH",
-  },
-];
-
-export default function ParkingDashboardComponent() {
+export default function ParkingDashboard() {
+  const [parkingData, setParkingData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredCars, setFilteredCars] = useState(mockCarData);
-  const [date, setDate] = useState<Date>();
+  const [filteredCars, setFilteredCars] = useState([]);
+  const [date, setDate] = useState<Date | undefined>();
+
+  useEffect(() => {
+    async function fetchParkingData() {
+      try {
+        const response = await fetch("http://localhost:5000/api/parkingData");
+        const data = await response.json();
+        console.log(data);
+
+        setParkingData(data);
+        setFilteredCars(data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Failed to fetch parking data:", error);
+        setIsLoading(false);
+      }
+    }
+
+    fetchParkingData();
+  }, []);
 
   const handleSearch = () => {
-    const filtered = mockCarData.filter((car) =>
+    const filtered = parkingData.filter((car: any) =>
       car.noPlate.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredCars(filtered);
@@ -141,17 +134,23 @@ export default function ParkingDashboardComponent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCars.map((car) => (
-                  <TableRow key={car.no}>
-                    <TableCell>{car.no}</TableCell>
-                    <TableCell>{car.type}</TableCell>
-                    <TableCell>{car.noPlate}</TableCell>
-                    <TableCell>{car.timeIn}</TableCell>
-                    <TableCell>{car.timeOut}</TableCell>
-                    <TableCell>{car.duration}</TableCell>
-                    <TableCell>{car.blockId}</TableCell>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7}>Loading...</TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredCars.map((car: any) => (
+                    <TableRow key={car._id}>
+                      <TableCell>{car.no}</TableCell>
+                      <TableCell>{car.type}</TableCell>
+                      <TableCell>{car.noPlate}</TableCell>
+                      <TableCell>{car.timeIn}</TableCell>
+                      <TableCell>{car.timeOut}</TableCell>
+                      <TableCell>{car.duration}</TableCell>
+                      <TableCell>{car.blockId}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
